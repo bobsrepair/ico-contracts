@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>BOB Crowdsale Admin</title>
+    <meta charset="UTF-8">
+    <script src="jquery.min.js"></script>
+    <script type="text/javascript" src="web3_v1_0.min.js"></script>
+    <script type="text/javascript" src="ico.js"></script>
+    <link rel="stylesheet" href="style.css" type='text/css'/>
+</head>
+<body>
+<h1>BOB Crowdsale Admin</h1>
+<div>Current time: <input type="text" id="clock" name="clock" value="" readonly class="time"> (Z = UTC timezone, ISO8601 format)</div>
+
+<div class="error" id="errormsg"></div>
+<h2>0. Load contracts</h2>
+<form id="loadContractsForm">
+    <label>Token ABI:
+        <textarea id="tokenABI" readonly class="abi"></textarea>
+    </label>
+    <label>Crowdsale ABI:
+        <textarea id="crowdsaleABI" readonly  class="abi"></textarea>
+    </label>
+</form>
+
+<h2>1. Publish Crowdsale &amp; Token</h2>
+<form id="publishContractsForm">
+    <div>Tokens Cap: <input type="number" name="tokensCap" value="" class="number" min="0"> BOB</div>
+    <div><input type="button" id="publishCrowdsale" value="Publish"></div>
+    <div><label>Transaction: <input type="text" readonly name="publishedTx" value="" class="ethTx"></label></div>
+    <div><label>Crowdsale Published at: <input type="text" readonly name="publishedAddress" value="" class="ethAddress"></label></div>
+    <div><label>Token Published at: <input type="text" readonly name="tokenAddress" value="" class="ethAddress"></label></div>
+</form>
+
+<h2>2. Manage Crowdsale</h2>
+<form id="manageCrowdsale">
+    <div><label>Crowdsale at: <input type="text" name="crowdsaleAddress" value="" class="ethAddress"></label><input type="button" id="loadCrowdsaleInfo" value="Load info"></div>
+    <table>
+        <tr><td>Token address:</td><td><input type="text" name="tokenAddress" readonly value="" class="ethAddress"></td></tr>
+        <tr><td>Token totalSupply:</td><td><input type="number" name="tokenTotalSupply" readonly value="" class="number"> BOB</td></tr>
+        <tr><td>Token minted:</td><td><input type="number" name="tokensMinted" readonly value="" class="number"> BOB  (should be equal to totalSupply)</td></tr>
+        <tr><td>Token Cap:</td><td><input type="number" name="tokensCap" readonly value="" class="number"> BOB</td></tr>
+        <tr><td>Token owner:</td><td><input type="text" name="tokenOwner" readonly value="" class="ethAddress"> </td></tr>
+        <tr><td>Token minting finished:</td><td><input type="text" name="tokenMintingFinished" readonly value="" class="number"> </td></tr>
+        <tr><td>Token transfer enabled:</td><td><input type="text" name="tokenTransferEnabled" readonly value="" class="number"> </td></tr>
+    </table>
+    <div><input type="button" id="crowdsaleFinalize" value="Finalize"> Finalize crowdsale: allow token transfer, change token ownership to yourself (required to manage token). <b>No more tokens can be minted after this!</b></div>
+
+    <h3>Mint Tokens to team </h3>
+    <table>
+        <tr><td>Beneficiary:</td><td><input type="text" name="beneficiary" value="" class="ethAddress"></td></tr>
+        <tr><td>Amount:</td><td><input type="number" name="amount" value="" class="number" min="0"> BOB</td></tr>
+        <tr><td>Vesting start:</td><td><input type="text" name="vestingStart" value="" class="time"> (Before this time tokens will be fully locked. Leave empty if no vesting.)</td></tr>
+        <tr><td>Vesting end:</td><td><input type="text" name="vestingEnd" value="" class="time"> (After this time all token will be available. Leave empty if no vesting.)</td></tr>
+        <tr><td>Revokable:</td><td><label><input type="radio" name="revocable" value="true"> yes</label> <label><input type="radio" name="revocable" value="false" checked> no</label></td></tr>
+        <tr><td>Description:</td><td><label><input type="text" name="description" value=""> (Reason why you mint this tokens)</td></tr>
+    </table>
+    <div><input type="button" id="mintTokens" value="Mint tokens"></div>
+    <div><label>Transaction: <input type="text" readonly name="publishedTx" value="" class="ethTx"></label></div>
+    <div><label>Wallet address: <input type="text" readonly name="walletAddress" value="" class="ethAddress"></label></div>
+
+    <h4>Manage vesting wallets</h4>
+    <table id="vestingWallets">
+        <thead><tr>
+                <th>Wallet</th>
+                <th>Description</th>
+                <th>Beneficiary</th>
+                <th>Releasable, BOB</th>
+                <th></th>
+        </tr></thead>
+        <tbody></tbody>
+    </table>
+
+
+    <h3>Distribute tokens to buyers </h3>
+    <div>List of addresses and amounts of BOB divided with tab or space. One address and amount per line. Copy this from MS Excell or Google Sheets.<br><span style="color: red;">Check that the whole list of addresses does not have duplicates!</span> If there are 2 buyers with same ETH address, this two lines should be combined before distribution.</div>
+    <textarea name="distributionCSV" style="width:100%; height: 5em;"></textarea>
+    <div><input type="button" id="parseDistributionCSV" value="Parse list"></div>
+    <div id="distributionPrepareData">
+        <table id="parsedDistributionList">
+            <thead>
+                <tr><th>#</th><th>Address</th><th>Amount, BOB</th><th>Already distributed, BOB</th></tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+        <div id="parseDistributionResult"></div>
+        <textarea id="distributionJSON" name="distributionJSON" readonly style="width:100%; height: 5em; display: none;"></textarea>
+        <div>Send to addresses from: <input type="number" name="sendStart" value="0" class="number">, batch size: <input type="number" name="sendLimit" value="100" class="number"></div>
+        <input type="button" id="executeDistribution" value="Execute">
+        <div id="distributionLog"></div>
+    </div>
+</form>
+<form id="manageToken">
+    <div><label>Token at: <input type="text" name="tokenAddress" value="" class="ethAddress"></label><input type="button" id="loadTokenInfo" value="Load info"></div>
+    <table>
+        <tr><td>Token owner:</td><td><input type="text" name="tokenOwner" readonly value="" class="ethAddress"></td></tr>
+        <tr><td>Total Supply:</td><td><input type="number" name="tokenTotalSupply" readonly value="" class="number"> BOB</td></tr>
+        <tr><td>Token paused:</td><td><input type="text" name="tokenPaused" readonly value="" class=""></td></tr>
+        <tr><td>Split number:</td><td><input type="number" name="airdropNum" readonly value="" class="number"></td></tr>
+        <tr><td>Multiplier:</td><td><input type="number" name="airdropMultiplier" readonly value="" class="number"></td></tr>
+        <tr><td>Undropped:</td><td><input type="number" name="airdropUndropped" readonly value="" class="number"> BOB</td></tr>
+    </table>
+
+    <h3>Airdrop tokens</h3>
+    <div>Airdrop multiplier: <input type="number" name="multiplier" value="" class="number" min="1.01" step="0.01"> (If multiplier = 2, then 1 old BOB will become 2 new BOB. Minimal multiplier: 1.01, that is 100 BOB will become 101 BOB. Multiplier like 1.506 will be rounded to 1.51)</div>
+    <div>
+        <input type="button" id="startAirdrop" value="Start Airdrop">
+        <input type="button" id="finishAirdrop" value="Finish Airdrop">
+    </div>
+    <div>List of addresses of BOB holders, one in a line.</div>
+    <textarea name="airdropAddresses" style="width:100%; height: 5em;"></textarea>
+    <div><input type="button" id="parseAirdropCSV" value="Parse list"></div>
+    <textarea name="parsedAirdropAddresses" readonly style="width:100%; height: 1em;"></textarea>
+    <div>Drop addresses from: <input type="number" name="airdropBatchStart" value="0" class="number">, batch size: <input type="number" name="airdropBatchLimit" value="100" class="number"></div>
+    <input type="button" id="executeAirdrop" value="Execute">
+    <div id="airdropLog"></div>
+
+</form>
+
+
+
+
+
+</body>
+</html>
